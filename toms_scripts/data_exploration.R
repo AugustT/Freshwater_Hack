@@ -32,5 +32,4 @@ for(i in c('created', 'access', 'login')){
 }  
 
 str(new_data)
-data <- new_data
-save(new_data, file = 'data/data.rdata')
+save(new_data, file = 'data/new_data.rdata')
