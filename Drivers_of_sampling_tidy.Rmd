@@ -1,0 +1,82 @@
+---
+title: "Drivers of sample number"
+author: "Engagement team - Freshawater Hackathon"
+date: "25-27 May 2017"
+output: html_document
+---
+  
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, cache = TRUE)
+```
+
+# Introduction
+
+We want to know what the drivers of more samples is. We think this might be driven by things like the type of training they got, the amount and types of social engagement, length of involvement, etc.
+
+# Data
+
+The data were provided in .csv format. These were read in and some columns were fixed. The data was saved then as a `.rdata` which we read in here
+
+```{r read_data, echo=FALSE, results = FALSE}
+rm(list = ls())
+load('data/new_data2.rdata')
+library(lme4)
+library(ggplot2)
+library(reshape2)
+library(pscl)
+library(glmm)
+library(sjPlot)
+library(sjmisc)
+
+# merge in the social metrics
+social_metrics <- read.csv('data/Skill&com_score.csv')
+
+new_data <- merge(x = new_data, y = social_metrics, by = 'uid', all = TRUE)
+
+# Merge in the country data
+countries <- read.csv(file = 'data/Country.csv')
+
+new_data <- merge(x = new_data, y = countries, by = 'uid', all = TRUE)
+```
+
+Looking at the data we need to look out for NAs and skew as well as the fact that our samples counts are zero inflated and skewed.
+
+```{r first_stats}
+# We have a zero inflation problem
+hist(new_data$Sample, breaks = 100)
+
+# get rid of zeros
+new_data_noZeros <- new_data[new_data$Sample > 0 & new_data$ActivePeriod > 0 & new_data$Staff == 0, ]
+
+# How much data do we have for the covariates of interest?
+nrow(new_data_noZeros)
+summary(new_data_noZeros[, c('ActivePeriod', 'Paid','Staff','PCA1_Difficulty', 'WQS', 'Com_score', 'Skill_score', 'Team')])
+# We are going to lose lots of data through NAs in the Paid column
+# WQS would be great but there are so many NAs we just can't use it
+
+# We might be best loging some of our predictor variables
+hist(log(new_data_noZeros$ActivePeriod))
+hist(new_data_noZeros$PCA1_Difficulty)
+hist(log(new_data_noZeros$Com_score))
+hist(log(new_data_noZeros$Skill_score))
+hist(new_data_noZeros$Team)
+```
+
+We can use a poisson distribution to account for the skew in teh samples counts and removes 0s to deal with the zero inflation. This step is reasonable as the 0 people are not involved in the project. The explanatory variables are in some cases improved by logging.
+
+```{r}
+# We need to move to a mixed effects model because we want to put country in there
+m3 <- glmer(Sample ~ log(ActivePeriod+1) + Paid + PCA1_Difficulty + log(Com_score+1) + log(Skill_score+1) + Team + (1|Country), data = new_data_noZeros, family = 'poisson')
+
+summary(m3)
+# Adding country as a random effect has improved the model
+sjp.glmer(m3)
+
+sjp.glmer(m3, type = "eff",
+          # axis.lim = list(c(0,50), c(0,5), c(0,5), c(0,5)),
+          facet.grid = FALSE,
+          show.p = TRUE,
+          show.ci = TRUE)
+```
+
+The results from the mixed effects model shows that a number of parameters are important. We plot the random effect which show how the countries vary in the amount of samples they generate and we plot the fixed effects. The increasing error in these i think reflects the fact that in most cases sample size decreases as values increase.

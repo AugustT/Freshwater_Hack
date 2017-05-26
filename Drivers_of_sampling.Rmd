@@ -24,11 +24,19 @@ library(lme4)
 library(ggplot2)
 library(reshape2)
 library(pscl)
+library(glmm)
+library(sjPlot)
+library(sjmisc)
 
-# merge in hte social metrics
+# merge in the social metrics
 social_metrics <- read.csv('data/Skill&com_score.csv')
 
 new_data <- merge(x = new_data, y = social_metrics, by = 'uid', all = TRUE)
+
+# Merge in the country data
+countries <- read.csv(file = 'data/Country.csv')
+
+new_data <- merge(x = new_data, y = countries, by = 'uid', all = TRUE)
 ```
 
 Now lets do some correlative analyses
@@ -36,7 +44,7 @@ Now lets do some correlative analyses
 ```{r first_stats}
 attach(new_data)
 
-hist(new_data$Sample, , breaks = 100)
+hist(new_data$Sample, breaks = 100)
 
 # We have a zero inflation problem
 
@@ -58,11 +66,24 @@ hist(log(new_data$Skill_score))
 
 # We think that the 0s in active days and in samples is confusing this analysis
 # I also remove staff
-new_data_noZeros <- new_data[new_data$Sample > 0 & new_data$ActivePeriod > 0 & new_data$Staff == 0, ]
+# new_data_noZeros <- new_data[new_data$Sample > 0 & new_data$ActivePeriod > 0 & new_data$Staff == 0, ]
 
 m2 <- glm(Sample ~ log(ActivePeriod+1) + Paid + PCA1_Difficulty + log(Com_score+1) + log(Skill_score+1), data = new_data, family = 'poisson')
 
 summary(m2)
+
+# We need to move to a mixed effects model because we want to put country in there
+m3 <- glmer(Sample ~ log(ActivePeriod+1) + Paid + PCA1_Difficulty + log(Com_score+1) + log(Skill_score+1) +(1|Country), data = new_data, family = 'poisson')
+
+summary(m3)
+# Adding country as a random effect has improved the model
+sjp.glmer(m3)
+
+sjp.glmer(m3, type = "eff",
+          axis.lim = list(c(0,50), c(0,5), c(0,5), c(0,5)),
+          facet.grid = FALSE,
+          show.p = TRUE,
+          show.ci = TRUE)
 ```
 
 # Results
