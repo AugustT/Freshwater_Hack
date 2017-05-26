@@ -1,0 +1,22 @@
+---
+title: "Drivers of sample number"
+author: "Engagement team - Freshawater Hackathon"
+date: "25-27 May 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Introduction
+
+We want to know what the drivers of more samples is. We think this might be driven by things like the type of training they got, the amount and types of social engagement, length of involvement, etc.
+
+# Data
+
+The data were provided in .csv format. These were read in and some columns were fixed. The data was saved then as a `.rdata` which we read in here
+
+```{r read_data}
+load(')
+```
