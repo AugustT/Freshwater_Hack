@@ -19,10 +19,62 @@ The data were provided in .csv format. These were read in and some columns were 
 
 ```{r read_data}
 load('data/data.rdata')
+library(lme4)
+library(ggplot2)
 ```
 
 Now lets do some correlative analyses
 
 ```{r first_stats}
+attach(new_data)
 
+m1 <- glm(Sample ~ ActivePeriod + Paid, family = 'poisson')
+
+summary(m1)
+
+```
+
+# Results
+
+There is a diffrence in paid and unpaid traing and how long they stay
+
+```{r effect_of_pay}
+pay <- new_data[!is.na(new_data$Paid),]
+p <- ggplot(pay, aes(as.factor(Paid), na.omit(log(ActivePeriod)+1)))
+p + geom_boxplot()
+
+t1a <- t.test(x = log(na.omit(new_data$ActivePeriod[new_data$Paid == 1]+1)),
+             y = log(na.omit(new_data$ActivePeriod[new_data$Paid == 0]+1)))
+
+cat('mean of people paid to train', as.numeric(exp(t1a$estimate[1])), '\n')
+cat('mean of people not paid to train', as.numeric(exp(t1a$estimate[2])), '\n')
+
+# Lets to this again without staff or people who have provided 0 samples
+pay2 <- new_data[!is.na(new_data$Paid) & new_data$Sample > 0 & new_data$Staff == 0,]
+p <- ggplot(pay2, aes(as.factor(Paid), na.omit(log(ActivePeriod)+1)))
+p + geom_boxplot()
+
+t1b <- t.test(x = log(na.omit(pay2$ActivePeriod[pay2$Paid == 1]+1)),
+             y = log(na.omit(pay2$ActivePeriod[pay2$Paid == 0]+1)))
+
+cat('mean of people paid to train', as.numeric(exp(t1b$estimate[1])), '\n')
+cat('mean of people not paid to train', as.numeric(exp(t1b$estimate[2])), '\n')
+
+# So this means the true effect is something to with 0 samplers
+# Who are these people?
+
+zeros <- new_data
+```
+
+
+```{r effect_of_team}
+team <- new_data[!is.na(new_data$Team) & new_data$Sample > 0,]
+p <- ggplot(team, aes(as.factor(Team), na.omit(log(Sample)+1)))
+p + geom_boxplot()
+
+t2 <- t.test(x = log(na.omit(new_data$Sample[new_data$Team == 1]+1)),
+             y = log(na.omit(new_data$Sample[new_data$Team == 0]+1)))
+
+cat('mean of people in teams', as.numeric(exp(t2$estimate[1])), '\n')
+cat('mean of people not in teams', as.numeric(exp(t2$estimate[2])), '\n')
 ```
