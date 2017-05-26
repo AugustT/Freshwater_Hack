@@ -18,5 +18,11 @@ We want to know what the drivers of more samples is. We think this might be driv
 The data were provided in .csv format. These were read in and some columns were fixed. The data was saved then as a `.rdata` which we read in here
 
 ```{r read_data}
-load(')
+load('data/data.rdata')
+```
+
+Now lets do some correlative analyses
+
+```{r first_stats}
+
 ```
