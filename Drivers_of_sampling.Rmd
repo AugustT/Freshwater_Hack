@@ -6,7 +6,7 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE, cache = TRUE)
 ```
 
 # Introduction
@@ -18,9 +18,17 @@ We want to know what the drivers of more samples is. We think this might be driv
 The data were provided in .csv format. These were read in and some columns were fixed. The data was saved then as a `.rdata` which we read in here
 
 ```{r read_data}
-load('data/data.rdata')
+rm(list = ls())
+load('data/new_data2.rdata')
 library(lme4)
 library(ggplot2)
+library(reshape2)
+library(pscl)
+
+# merge in hte social metrics
+social_metrics <- read.csv('data/Skill&com_score.csv')
+
+new_data <- merge(x = new_data, y = social_metrics, by = 'uid', all = TRUE)
 ```
 
 Now lets do some correlative analyses
@@ -28,10 +36,33 @@ Now lets do some correlative analyses
 ```{r first_stats}
 attach(new_data)
 
-m1 <- glm(Sample ~ ActivePeriod + Paid, family = 'poisson')
+hist(new_data$Sample, , breaks = 100)
 
-summary(m1)
+# We have a zero inflation problem
 
+# How much data do we have for the covariates of interest?
+nrow(new_data)
+summary(new_data[, c('ActivePeriod', 'Paid','Staff','PCA1_Difficulty', 'WQS', 'Com_score', 'Skill_score')])
+# We are going to lose lots of data through NAs in the Paid column
+# WQS would be great but there are so many NAs we just can't use it
+
+# We might be best loging some of our predictor variables
+hist(log(new_data$ActivePeriod))
+hist(new_data$PCA1_Difficulty)
+hist(log(new_data$Com_score))
+hist(log(new_data$Skill_score))
+
+# m1 <- zeroinfl(Sample ~ log(ActivePeriod) + Paid + Staff + PCA1_Difficulty + log(Com_score) + log(Skill_score), data = new_data)
+# 
+# summary(m1)
+
+# We think that the 0s in active days and in samples is confusing this analysis
+# I also remove staff
+new_data_noZeros <- new_data[new_data$Sample > 0 & new_data$ActivePeriod > 0 & new_data$Staff == 0, ]
+
+m2 <- glm(Sample ~ log(ActivePeriod+1) + Paid + PCA1_Difficulty + log(Com_score+1) + log(Skill_score+1), data = new_data, family = 'poisson')
+
+summary(m2)
 ```
 
 # Results
@@ -63,7 +94,56 @@ cat('mean of people not paid to train', as.numeric(exp(t1b$estimate[2])), '\n')
 # So this means the true effect is something to with 0 samplers
 # Who are these people?
 
-zeros <- new_data
+zeros <- data.frame(p = c('no records', 'some records'),
+                   paid = c(nrow(new_data[new_data$Paid == 1 & new_data$Sample == 0,]),
+                            nrow(new_data[new_data$Paid == 1 & new_data$Sample > 0,])),
+                   unpaid = c(nrow(new_data[new_data$Paid == 0 & new_data$Sample == 0,]),
+                              nrow(new_data[new_data$Paid == 0 & new_data$Sample > 0,])))
+# counts to proportions
+pzeros <- zeros
+pzeros$paid <- zeros$paid/sum(zeros$paid)
+pzeros$unpaid <- zeros$unpaid/sum(zeros$unpaid)
+
+mzeros <- melt(pzeros)
+colnames(mzeros)[3] <- 'Proportion_of_users'
+
+
+ggplot(aes(x = variable,
+           y = Proportion_of_users,
+           fill = p),
+       data = mzeros) + geom_bar(stat = 'identity', position=position_dodge())
+
+# Looks like paid people sign up and do nothing
+chisq.test(x = t(zeros[,2:3]))
+
+# look in more detail
+hist(new_data$Sample[new_data$Paid == 1], xlim = c(0,50), breaks = c(0:80, max(new_data$Sample)))
+hist(new_data$Sample[new_data$Paid == 0], xlim = c(0,50), breaks = c(0:80, max(new_data$Sample)))
+
+# Now lets do that same as this but look at people who have had training in uploading
+
+
+uploaded <- data.frame(p = c('no records', 'some records'),
+                   uploaded = c(nrow(new_data[new_data$Upload == 1 & new_data$Sample == 0,]),
+                            nrow(new_data[new_data$Upload == 1 & new_data$Sample > 0,])),
+                   not_uploaded = c(nrow(new_data[new_data$Upload == 0 & new_data$Sample == 0,]),
+                              nrow(new_data[new_data$Upload == 0 & new_data$Sample > 0,])))
+# counts to proportions
+puploaded <- uploaded
+puploaded$uploaded <- puploaded$uploaded/sum(puploaded$uploaded)
+puploaded$not_uploaded <- puploaded$not_uploaded/sum(puploaded$not_uploaded)
+
+muploaded <- melt(puploaded)
+colnames(muploaded)[3] <- 'Proportion_of_users'
+
+
+ggplot(aes(x = variable,
+           y = Proportion_of_users,
+           fill = p),
+       data = muploaded) + geom_bar(stat = 'identity', position=position_dodge())
+
+# Looks like upload training makes no difference
+chisq.test(x = t(uploaded[,2:3]))
 ```
 
 

@@ -32,4 +32,4 @@ for(i in c('created', 'access', 'login')){
 }  
 
 str(new_data)
-save(new_data, file = 'data/new_data.rdata')
+save(new_data, file = 'data/new_data2.rdata')
