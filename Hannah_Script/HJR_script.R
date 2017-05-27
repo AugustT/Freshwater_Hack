@@ -69,19 +69,19 @@ plotTable <- function(table, variable){
 }
 
 # plot and save the images
-png(filename = 'Hannah_Script/figures/Paid.png', width = 3, height = 5, units = 'in', res = 300)
+png(filename = 'Hannah_Script/figures/Paid.png', width = 4, height = 5, units = 'in', res = 300)
   plotTable(Paid, variable = 'Paid')
 dev.off()
 
-png(filename = 'Hannah_Script/figures/Online.png', width = 3, height = 6, units = 'in', res = 300)
+png(filename = 'Hannah_Script/figures/Online.png', width = 4, height = 6, units = 'in', res = 300)
   plotTable(Online, variable = 'Online training only')
 dev.off()
 
-png(filename = 'Hannah_Script/figures/TraningTransport.png', width = 3, height = 6, units = 'in', res = 300)
+png(filename = 'Hannah_Script/figures/TraningTransport.png', width = 4, height = 6, units = 'in', res = 300)
   plotTable(TranTrai, variable = 'Transport arranged to training')
 dev.off()
 
-png(filename = 'Hannah_Script/figures/Upload.png', width = 3, height = 6, units = 'in', res = 300)
+png(filename = 'Hannah_Script/figures/Upload.png', width = 4, height = 6, units = 'in', res = 300)
   plotTable(Upload, variable = 'Uploaded data during training')
 dev.off()
 
