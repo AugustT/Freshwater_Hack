@@ -2,7 +2,10 @@
 title: "Drivers of sample number"
 author: "Engagement team - Freshawater Hackathon"
 date: "25-27 May 2017"
-output: html_document
+output:
+  html_document: default
+  pdf_document: default
+  word_document: default
 ---
   
 ```{r setup, include=FALSE}
@@ -37,6 +40,18 @@ new_data <- merge(x = new_data, y = social_metrics, by = 'uid', all = TRUE)
 countries <- read.csv(file = 'data/Country.csv')
 
 new_data <- merge(x = new_data, y = countries, by = 'uid', all = TRUE)
+
+# Add the real activity period
+SamplingActivityPeriod <- read.csv('data/SamplingActivePeriod.csv', stringsAsFactors = FALSE)
+
+new_data <- merge(x = new_data, y = SamplingActivityPeriod, by = 'uid', all = TRUE)
+
+# replace the old activity column with this one
+names(new_data)
+
+new_data <- new_data[,names(new_data) !='ActivePeriod']
+
+colnames(new_data)[47] <- 'ActivePeriod'
 ```
 
 Looking at the data we need to look out for NAs and skew as well as the fact that our samples counts are zero inflated and skewed.
