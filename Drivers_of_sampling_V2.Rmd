@@ -3,8 +3,8 @@ title: "Drivers of sample number"
 author: "Engagement team - Freshawater Hackathon"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 output:
-  word_document: default
   html_document: default
+  word_document: default
 ---
   
 ```{r setup, include=FALSE}
@@ -82,7 +82,7 @@ biplot(PCA_c)
 
 A PCA does not work here as there is not a strong correlation between the social factors. This does not stop us from summing across these values to get the total communication engagement
 
-```{r calculate_social_metrics1}
+```{r calculate_social_metrics2}
 # These numbers are scaled to have a mean of 0 but actually I want them to have a minimum of 0
 # and max of 1
 
@@ -283,5 +283,3 @@ deviance_explained
 # # this does not seem happy!
 
 ```
-
-The results from the mixed effects model shows that a number of parameters are important. We plot the random effect which show how the countries vary in the amount of samples they generate and we plot the fixed effects. The increasing error in these i think reflects the fact that in most cases sample size decreases as values increase.
