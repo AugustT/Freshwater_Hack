@@ -3,10 +3,10 @@ title: "Drivers of sample number"
 author: "Engagement team - Freshawater Hackathon"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 output:
-  word_document: default
   html_document:
     toc: yes
     toc_float: yes
+  word_document: default
 ---
   
 ```{r setup, include=FALSE}
