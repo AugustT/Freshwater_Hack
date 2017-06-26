@@ -3,10 +3,10 @@ title: "Drivers of sample number"
 author: "Engagement team - Freshawater Hackathon"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 output:
+  word_document: default
   html_document:
     toc: yes
     toc_float: yes
-  word_document: default
 ---
   
 ```{r setup, include=FALSE}
@@ -156,7 +156,7 @@ sample_data <- clean_data[clean_data$Sample > 0, ]
 
 # How much data do we have for the covariates of interest?
 nrow(sample_data)
-summary(sample_data[, c('PeriodSamp', 'Paid', 'difficulty_score', 'comm_score', 'Team', 'Rainfall', 'Temp', 'Country', 'Particip')])
+summary(sample_data[, c('PeriodSamp', 'Paid', 'difficulty_score', 'comm_cat', 'Team', 'Rainfall', 'Temp', 'Country', 'Particip')])
 # Could we add in the WQx variables? there are onl a handfull of NAs
 
 # We might be best logging some of our predictor variables
@@ -166,6 +166,7 @@ hist(sample_data$Paid)
 hist(sample_data$difficulty_score)
 # hist(log(sample_data$difficulty_score))
 # hist(log(sample_data$comm_score + 1))
+table(sample_data$comm_cat)
 hist(sample_data$comm_cat)
 hist(sample_data$QuizTime)
 hist(sample_data$Rainfall)
