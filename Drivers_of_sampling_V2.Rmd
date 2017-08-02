@@ -35,7 +35,7 @@ library(effects)
 ## Clean data
 
 ```{r data_exploration}
-raw_data <- read.csv('data/HWPEngage_3_170620.csv', stringsAsFactors = FALSE)
+raw_data <- read.csv('data/HWPEngage_5_170802.csv', stringsAsFactors = FALSE)
 
 clean_data <- raw_data
 
@@ -54,7 +54,8 @@ clean_data$Particip <- as.numeric(clean_data$Particip)
 nrow(clean_data)
 summary(clean_data)
 
-# We need to remove people who never record a sample
+# We need to remove people who never record a sample for the
+# sampling effort analysis, how many are there?
 sum(clean_data$Sample == 0)
 ```
 
@@ -72,7 +73,7 @@ PCA_c <- prcomp(~ log(BlogTime+0.1) + log(CommTime+0.1) + log(InvTime+0.1) + log
                 center = TRUE,
                 scale. = TRUE)
 
-# The first axis explains 93% of the variance
+# The first axis explains 44% of the variance
 summary(PCA_c)
 
 # This is because the values are highly correlated
@@ -173,29 +174,41 @@ hist(sample_data$Rainfall)
 hist(sample_data$Temp)
 hist(sample_data$Sample)
 hist(log(sample_data$Sample))
+
+summary(sample_data[,c('PeriodSamp','Paid','Particip','difficulty_score','comm_cat','QuizTime','Team','WQC', 'WQO', 'WQM')])
+cor(na.omit(sample_data[,c('PeriodSamp','Paid','Particip','difficulty_score','comm_cat','QuizTime','Team','WQC', 'WQO', 'WQM')]))
 ```
 
 We can use a poisson distribution to account for the skew in the samples counts. We need to log the sample counts for this to work but this result in non-integer values which wont work with poission, instead we need to use quasi-poisson. In turn this means we cannot use a mixed effects model so we need to include country as a fixed efect.
 
 ```{r modelling}
-# lets just add in country as a fixed effect here
 m2a <- glm(log(Sample) ~ PeriodSamp + 
-                        Paid +
-                        Particip +
-                        difficulty_score +
-                        comm_cat +
-                        QuizTime +
-                        # Team + # this has no effect on the model but fixes UK issue
-                        # Rainfall + # I dont these climate variables should be here
-                        # Temp + # do we really expect them to have an effect here?
-                        Country,
-            data = sample_data,
-            family = quasipoisson)
-plot(m2a, ask = FALSE)
+                         Paid +
+                         Particip +
+                         difficulty_score +
+                         comm_cat +
+                         QuizTime +
+                         Team +
+                         WQC +
+                         WQO +
+                         WQM,
+            data = sample_data)
+# m2aNB <- MASS::glm.nb(Sample ~ PeriodSamp +
+#                          Paid +
+#                          Particip +
+#                          difficulty_score +
+#                          comm_cat +
+#                          QuizTime +
+#                          Team +
+#                          WQC +
+#                          WQO +
+#                          WQM,
+#             data = sample_data[!rownames(sample_data) %in% c('5480','298','182'),])
+# plot(m2aNB, ask = FALSE)
+# summary(m2aNB)
+# plot(m2a, ask = FALSE)
 # the three outliers without log(samples) are the three people with the most samples
-# We have 'zero-inflation' I think
-# Negative binomial is not better
-# zeroinflation model doesnt help
+# negative binomial model does not account for these as well
 summary(m2a)
 
 # I think that country correlates with the other variables
@@ -209,7 +222,63 @@ deviance_explained
 
 # Let's plot the significant results.
 # The y-axis can be viewed as the increase in number of samples
-for(i in c('PeriodSamp','Particip','difficulty_score','comm_cat','QuizTime','Country')){
+# get significant factors
+pvals <- summary(m2a)$coefficients[,'Pr(>|t|)']
+to_plot <- names(tail(pvals, -1)[tail(pvals, -1) <= 0.05])
+
+plot_binomial <- function(Effect,
+                          ylab = 'Effect on probability of retention',
+                          xlab = 'TITLE',
+                          xscale = c(0,1),
+                          labels = c('No','Yes'),
+                          ylim = c(0,0.6),
+                          ...){
+  plot(xscale, pch = 19, xaxt="n",
+       y = Effect$effect[as.character(xscale)],
+       ylim = ylim,#range(c(Effect$lower, Effect$upper)),
+       xlab = xlab,
+       xlim = c(min(xscale)-0.75,max(xscale)+0.75),
+       ylab = ylab,
+       ...)
+  axis(1, at = xscale, labels = labels)
+  arrows(xscale,
+         Effect$lower[as.character(xscale)],
+         xscale,
+         Effect$upper[as.character(xscale)],
+         length = 0.05,
+         angle = 90,
+         code = 3)
+}
+
+layout(matrix(c(1,1,2,2,2), 1, 5, byrow = TRUE))
+
+plot_binomial(summary(Effect('Paid', m2a)),
+              ylab = 'Effect on log(Samples) collected', ylim = c(0.5,2),
+              xlab = 'Paid to attend training')
+plot_binomial(summary(Effect('comm_cat', m2a)), xscale = 0:2,
+              labels = c('Low', 'Medium', 'High'),
+              ylab = 'Effect on log(Samples) collected', ylim = c(0.5,2),
+              xlab = 'Participent engagement on website (Blogs etc.)')
+
+plot(Effect('PeriodSamp', m2a),
+     ylab = 'Effect on log(Samples) collected',
+     xlab = 'Sampling period (days)',
+     main = '')
+plot(Effect('Particip', m2a),
+     ylab = 'Effect on log(Samples) collected',
+     xlab = 'Median number of people at each sampling event',
+     main = '')
+plot(Effect('difficulty_score', m2a),
+     ylab = 'Effect on log(Samples) collected',
+     xlab = 'Difficulty of sampling protocol',
+     main = '')
+
+plot(Effect('QuizTime', m2a),
+     ylab = 'Effect on log(Samples) collected',
+     xlab = 'The number of learning modules completed',
+     main = '')
+
+for(i in to_plot){
   print(plot(Effect(i, m2a)))
 }
 ```
@@ -228,8 +297,8 @@ str(clean_data)
 clean_data$Sample01 <- ifelse(clean_data$Sample > 0, 1, 0)
 
 # Lets veiw the metrics we are going to use
-summary(clean_data[,c('Paid','TranTrai','Upload','TrainTeam','TeamPoints','Team','Temp','Rainfall', 'People')])
-cor(clean_data[,c('Paid','TranTrai','Upload','TrainTeam','TeamPoints','Team','Temp','Rainfall', 'People')])
+summary(clean_data[,c('Paid','TranTrai','Upload','TrainTeam','TeamPoints','Team','Temp','Rainfall')])
+cor(clean_data[,c('Paid','TranTrai','Upload','TrainTeam','TeamPoints','Team','Temp','Rainfall')])
 
 # Take a look at some of these
 hist(clean_data$TeamPoints)
@@ -265,9 +334,44 @@ car::vif(b1)
 
 # Let's plot the significant results.
 # The y-axis can be viewed as probability of retention after training
-for(i in c('Paid','TranTrai','Upload','TrainTeam','TeamPoints','Team','Temp')){
-  print(plot(Effect(i, b1)))
-}
+pvals <- summary(b1)$coefficients[,'Pr(>|z|)']
+to_plot <- names(tail(pvals, -1)[tail(pvals, -1) <= 0.05])
+to_plot[to_plot == "log(TeamPoints + 0.001)"] <- 'TeamPoints'
+# for(i in to_plot){
+#   print(plot(Effect(i, b1)))
+# }
+# plots show 95% confidence limits
+# plot them in turn to get them 'just right'
+layout(matrix(c(1,2), 1, 2, byrow = TRUE))
+
+plot_binomial(summary(Effect('Upload', b1)),
+              xlab = 'Trained to upload data')
+
+plot_binomial(summary(Effect('Team', b1)),
+              ylab = '',
+              xlab = 'Assigned to a research team')
+
+plot(Effect('TrainTeam', b1),
+     type = 'response',
+     ylab = 'Effect on probability of retention',
+     ylim = c(0,0.6),
+     xlab = 'Number of attendees on training day',
+     main = '')
+
+plot(Effect('TeamPoints', b1),
+     type = 'response',
+     ylab = 'Effect on probability of retention',
+     ylim = c(0,0.6),
+     xlab = 'Average FWW points of training group',
+     main = '')
+
+plot(Effect('Temp', b1),
+     type = 'response',
+     ylab = 'Effect on probability of retention',
+     ylim = c(0,0.6),
+     xlab = 'Temperature on training day',
+     main = '')
+# Figures were exported from Rstudio to work via the clipboard
 ```
 
 The results here are essentially the same as those we got on the hack day.
